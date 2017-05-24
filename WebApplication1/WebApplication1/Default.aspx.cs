@@ -5,6 +5,8 @@ using System.Web;
 using System.Web.UI;
 using System.Web.UI.WebControls;
 using System.Drawing;
+using System.Web.Security;
+using System.Data.OleDb;
 
 namespace WebApplication1
 {
@@ -16,15 +18,44 @@ namespace WebApplication1
         }
         protected void ButtonSend_Click(object sender, EventArgs e)
         {
-            int a = Convert.ToInt32(this.TextBox1.Text);
-            int b = Convert.ToInt32(this.TextBox2.Text);
-            //Label3.Text = "Здравствуйте, " + TextBox1.Text + " " + TextBox2.Text + "! Добро пожаловать в приложение ASP.NET";
-            //Label2.ForeColor = Color.Green;
-            TextBox1.Text = Convert.ToString(Convert.ToInt32(a));
-            TextBox2.Text = Convert.ToString(Convert.ToInt32(b));
-            TextBox3.Text = Convert.ToString(Convert.ToInt32((a*(b*b)*Math.PI)/3));
-            TextBox3.ForeColor = Color.Green;
         }
 
+        protected void ValidateUser(object sender, EventArgs e)
+        {
+            int gameId = 0;
+
+            if (LoginCtrl.Password != "pingpong") {
+                LoginCtrl.FailureText = "Неверный пароль";
+                return;
+            }
+
+            string queryString = "SELECT `id` FROM `data` WHERE `player1`='" + LoginCtrl.UserName + "' OR `player2`='" + LoginCtrl.UserName + "' ";
+
+            string connectionString = @"Provider=Microsoft.ACE.OLEDB.12.0;" +
+@"Data Source=C:\Users\ilmir\Source\Repos\pingpong-asp\WebApplication1\WebApplication1\App_Data\db1.mdb;" +
+@"User Id=;Password=;";
+            OleDbConnection connection = new OleDbConnection(connectionString);
+
+            OleDbCommand command = new OleDbCommand(queryString, connection);
+            connection.Open();
+            using (OleDbDataReader reader = command.ExecuteReader())
+            {
+                if (reader.HasRows)
+                {
+                    reader.Read();
+                    gameId = reader.GetInt32(0);
+                }
+            }
+            connection.Close();
+
+            if (gameId == 0)
+            {
+                LoginCtrl.FailureText = "Пользователь не существует";
+            } else
+            {
+                FormsAuthentication.SetAuthCookie(LoginCtrl.UserName, true);
+                Response.Redirect("Table.aspx");
+            }
+        }
     }
 }
